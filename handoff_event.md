@@ -81,12 +81,15 @@ Valid date ranges: `today`, `this_weekend`, `this_week`, `this_month`
 ## UI Design Brief
 
 - **Dark theme** — background `#08080f`, cards `#131320`
-- **Neon accents** — purple `#7c3aed` (primary), cyan `#06b6d4` (secondary)
-- Category badges: purple=concert, cyan=DJ, pink=party, green=electronic
-- Cards: hero photo (16:9), category badge, title, date+venue, artists, description, "Get Tickets →" button
-- Filter bar: Category tabs + Date range tabs + Refresh button
-- Hover: card lifts + purple glow shadow
-- Loading: shimmer skeleton cards
+- **Tailwind CSS** — no custom CSS files, no icon libraries
+- **No icons** — clean text-only UI throughout
+- **Neon accents** — violet-600 (primary), cyan-500 (secondary)
+- Category badges: violet=concert, cyan=DJ, pink=party, emerald=electronic
+- Cards: hero photo (16:9 aspect), category badge, title, date+venue, artists, description (3-line clamp), "Get Tickets →" button
+- Filter bar: pill buttons for category + date range, plain Refresh button
+- Hover: card lifts `-translate-y-1` + purple glow `shadow-card-hover`
+- Loading: shimmer skeleton cards (`bg-shimmer` Tailwind utility)
+- **Mock data fallback**: 6 sample events shown when backend unreachable + amber warning banner
 
 ---
 

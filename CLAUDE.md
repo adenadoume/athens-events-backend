@@ -39,10 +39,11 @@ Local paths:
 
 ### Frontend
 - **TypeScript** — consistent with all other apps in the stack (softone-live, pool-maintenance-app etc.)
-- **No Ant Design** — this is a consumer-facing nightlife app, not an internal dashboard. Custom CSS dark theme fits the brand better.
-- **Lucide React** — lightweight icon set, no overhead
+- **No Ant Design** — this is a consumer-facing nightlife app, not an internal dashboard
+- **No icons** — clean text-only UI, no lucide-react or any icon library
 - **No React Router** — single-page, no routing needed in Phase 1
-- **Custom CSS** — dark nightlife theme (purple `#7c3aed` + cyan `#06b6d4` accents), not Tailwind, to keep bundle small and full design control
+- **Tailwind CSS** — switched from custom CSS to Tailwind (consistent with containers-claude and other apps in stack). Dark nightlife theme via Tailwind utilities + custom colors in `tailwind.config.js` (violet-600 primary, cyan-500 secondary)
+- **Mock data fallback** — 6 sample events shown when backend is unreachable, with amber banner warning. UI is always usable even before backend is deployed.
 
 ### Backend
 - **FastAPI** — async, typed, auto-generates OpenAPI docs at `/docs`
@@ -89,26 +90,30 @@ backend/
 frontend/
 ├── src/
 │   ├── components/
-│   │   ├── EventCard.tsx         ✅ Photo + badge + meta + CTA button
-│   │   ├── EventGrid.tsx         ✅ Grid layout, error/empty states
-│   │   ├── FilterBar.tsx         ✅ Category + date range filters, refresh
+│   │   ├── EventCard.tsx         ✅ Photo + badge + meta + CTA button (no icons)
+│   │   ├── EventGrid.tsx         ✅ Grid layout, empty state
+│   │   ├── FilterBar.tsx         ✅ Category + date range pills, refresh button
 │   │   └── LoadingSkeleton.tsx   ✅ 8-card shimmer skeleton
 │   ├── pages/
-│   │   └── Home.tsx              ✅ Main page, state management
+│   │   └── Home.tsx              ✅ Main page, mock data banner
 │   ├── hooks/
-│   │   └── useEvents.ts          ✅ Data fetching with cancel cleanup
+│   │   └── useEvents.ts          ✅ Data fetching, falls back to mock data on error
 │   ├── utils/
 │   │   ├── api.ts                ✅ fetchEvents, checkHealth
-│   │   └── format.ts             ✅ formatDate, formatTime, categoryLabel, placeholderImage
+│   │   ├── format.ts             ✅ formatDate, formatTime, categoryLabel, placeholderImage
+│   │   └── mockData.ts           ✅ 6 sample events (Unsplash images) for offline preview
 │   ├── types/
 │   │   └── event.ts              ✅ Event, EventResponse, Filters types
 │   ├── App.tsx                   ✅
 │   ├── main.tsx                  ✅
-│   └── index.css                 ✅ Full dark nightlife theme
+│   ├── vite-env.d.ts             ✅ import.meta.env TypeScript support
+│   └── index.css                 ✅ Tailwind base + shimmer animation + scrollbar
 ├── index.html                    ✅ Inter font, meta tags
+├── tailwind.config.js            ✅ Custom colors: bg, accent-purple/cyan/pink/green
+├── postcss.config.js             ✅ Tailwind + autoprefixer
 ├── vite.config.ts                ✅ /api proxy for local dev
 ├── vercel.json                   ✅ SPA rewrite
-└── package.json                  ✅ React 18, Vite 5, Lucide, TypeScript
+└── package.json                  ✅ React 18, Vite 5, Tailwind 3, TypeScript (no icons)
 ```
 
 ---
@@ -229,21 +234,22 @@ git add -A && git commit -m "message" && git push
 - [x] Backend: Claude API parser
 - [x] Backend: In-memory cache (60 min TTL)
 - [x] Frontend: React + Vite + TypeScript scaffold
-- [x] Frontend: EventCard component (photo, badge, meta, CTA)
+- [x] Frontend: EventCard (photo, badge, meta, CTA — no icons)
 - [x] Frontend: EventGrid with loading skeleton
-- [x] Frontend: FilterBar (category + date range + refresh)
-- [x] Frontend: Dark nightlife theme (CSS)
-- [x] Docs: `app_architecture.md` rewritten with actual patterns
+- [x] Frontend: FilterBar (category + date range pills + refresh)
+- [x] Frontend: Dark nightlife theme — **Tailwind CSS** (violet/cyan accents)
+- [x] Frontend: Mock data fallback (6 sample events, amber preview banner)
+- [x] Frontend: Fixed `vite-env.d.ts` TypeScript build error
+- [x] Docs: `app_architecture.md` rewritten with actual patterns + Supabase guidance
 - [x] Docs: `CLAUDE.md` (this file) as living roadmap
+- [x] Repos: pushed to GitHub via SSH (`adenadoume/athens-events-*`)
 
 ### Phase 2 — Deploy & Validate
-- [ ] Create GitHub repos (`athens-events-frontend`, `athens-events-backend`)
-- [ ] Push code to GitHub
 - [ ] Deploy backend to Oracle VM (port 8004)
-- [ ] Configure Nginx reverse proxy
-- [ ] Deploy frontend to Vercel
-- [ ] Test end-to-end with real API keys
-- [ ] Add Vercel domain to `CORS_ORIGINS`
+- [ ] Configure Nginx reverse proxy on Oracle VM
+- [ ] Set `VITE_API_URL=http://141.147.44.143/athens-events/api` in Vercel dashboard
+- [ ] Test end-to-end with real API keys (Tavily + Firecrawl + Anthropic)
+- [ ] Add Vercel domain to `CORS_ORIGINS` in backend `.env`
 
 ### Phase 3 — Polish & Data Quality
 - [ ] Test each data source (Viva.gr, RA, TicketSwap)
@@ -275,12 +281,17 @@ git add -A && git commit -m "message" && git push
 
 **May 2026 — Initial Build**
 - Decided: TypeScript frontend (consistent with all other personal apps)
-- Decided: Custom CSS dark theme (not Ant Design — wrong fit for nightlife consumer app)
+- Decided: No Ant Design (wrong fit for consumer nightlife app)
+- Decided: No icons anywhere — clean text-only UI
+- Decided: **Tailwind CSS** (switched from custom CSS — consistent with containers-claude and full stack)
 - Decided: No React Router in Phase 1 (single page, no need)
 - Decided: In-memory cache, not Redis (simpler, sufficient for Phase 1)
+- Decided: No Supabase (app only fetches + displays external data, no persistence needed)
+- Decided: Mock data fallback so UI is always usable before backend is deployed
 - Decided: Cap Firecrawl at 10 pages/request (free tier budget)
 - Decided: Combine Tavily snippets into one Claude call (efficiency)
-- Decided: Port 8004 (follows 8001-8003 allocation pattern)
+- Decided: Port 8004 on Oracle VM (follows existing port allocation)
+- Decided: SSH remotes for GitHub (`git@github.com:adenadoume/`) — HTTPS auth fails on this Mac
 - Architecture documented in `app_architecture.md` for reuse in future apps
 
 ---

@@ -490,59 +490,116 @@ def _is_cache_valid(ts: datetime) -> bool:
 
 ## 7. Dark Nightlife Card UI (Athens Events Pattern)
 
-### Design Tokens
-```css
-:root {
-  --bg-primary: #08080f;
-  --bg-card: #131320;
-  --accent-purple: #7c3aed;
-  --accent-cyan: #06b6d4;
-  --accent-pink: #ec4899;
-  --accent-green: #10b981;
-  --text-primary: #f0f0f8;
-  --text-secondary: #8888aa;
-  --border: rgba(255,255,255,0.07);
-  --shadow-hover: 0 12px 48px rgba(124,58,237,0.25);
-  --radius-card: 14px;
+> Uses **Tailwind CSS** — consistent with all other apps in the stack. No icons, no Ant Design.
+
+### tailwind.config.js — Custom Colors
+```javascript
+theme: {
+  extend: {
+    colors: {
+      bg: {
+        primary: '#08080f',
+        surface: '#0f0f1a',
+        card: '#131320',
+        'card-hover': '#1a1a2e',
+      },
+      accent: {
+        purple: '#7c3aed',
+        cyan: '#06b6d4',
+        pink: '#ec4899',
+        green: '#10b981',
+      },
+    },
+    boxShadow: {
+      'card-hover': '0 12px 48px rgba(124,58,237,0.25)',
+    },
+  },
 }
 ```
 
-### Card Component Pattern (TypeScript)
+### index.css (Tailwind entry)
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body { background-color: #08080f; color: #f0f0f8; }
+}
+
+@layer utilities {
+  .bg-shimmer {
+    background: linear-gradient(90deg, #1a1a2e 25%, #22223a 50%, #1a1a2e 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+}
+```
+
+### Card Component Pattern (Tailwind)
 ```tsx
+// No icons — text only
 function EventCard({ event }: { event: Event }) {
   return (
-    <article className="event-card">
-      <div className="card-image-wrapper">
-        <img src={event.image_url} alt={event.title} loading="lazy" />
-        <span className={`badge badge-${event.category}`}>{event.category}</span>
-        {event.price && <span className="price-badge">{event.price}</span>}
+    <article className="group flex flex-col rounded-2xl border border-white/[0.07] bg-[#131320] overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-card-hover hover:border-violet-500/40">
+      <div className="relative aspect-video overflow-hidden">
+        <img src={event.image_url} alt={event.title} loading="lazy"
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+        <span className="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest backdrop-blur-sm bg-violet-600/80 text-white">
+          {categoryLabel(event.category)}
+        </span>
       </div>
-      <div className="card-body">
-        <h3>{event.title}</h3>
-        <div className="event-meta">
-          <Calendar size={13} />{formatDate(event.date)}
-          <MapPin size={13} />{event.venue}
+      <div className="flex flex-col gap-2 p-4 flex-1">
+        <h3 className="font-bold text-[0.95rem] text-white/90">{event.title}</h3>
+        <div className="flex flex-wrap gap-x-3 text-[0.72rem] text-white/50">
+          <span>{formatDate(event.date)}</span>
+          <span>{event.venue}</span>
         </div>
-        <p>{event.description}</p>
-        <a href={event.ticket_url} target="_blank" className="cta-button">
-          Get Tickets →
-        </a>
+        <p className="text-[0.78rem] text-white/40 leading-relaxed line-clamp-3 flex-1">
+          {event.description}
+        </p>
+        <div className="flex justify-between items-center mt-1">
+          <span className="text-[0.65rem] text-white/25">{sourceLabel(event.ticket_source)}</span>
+          <a href={event.ticket_url} target="_blank"
+            className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-cyan-500 text-white text-[0.75rem] font-semibold transition-colors">
+            Get Tickets →
+          </a>
+        </div>
       </div>
     </article>
   )
 }
 ```
 
-### Responsive Grid
-```css
-.event-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
-}
-@media (max-width: 640px) {
-  .event-grid { grid-template-columns: 1fr; }
-}
+### Responsive Grid (Tailwind)
+```tsx
+<div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-5">
+  {events.map(event => <EventCard key={event.id} event={event} />)}
+</div>
+```
+
+### Category Badge Colors
+```
+concert    → bg-violet-600/80
+dj         → bg-cyan-500/80
+party      → bg-pink-500/80
+electronic → bg-emerald-500/80
+```
+
+### Mock Data Fallback Pattern
+```tsx
+// useEvents.ts — fall back to MOCK_EVENTS on fetch error
+.catch(err => {
+  setEvents(MOCK_EVENTS)   // always show something
+  setIsMock(true)
+  setError(err.message)
+})
+
+// Home.tsx — amber banner when showing mock data
+{isMock && <div className="bg-amber-500/10 border-b border-amber-500/20 text-amber-400 text-xs text-center py-2">
+  ⚠ Preview mode — showing sample events. Backend not yet connected.
+</div>}
 ```
 
 ---
