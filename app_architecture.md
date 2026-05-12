@@ -16,9 +16,11 @@
 | Hosting — Backend | **Oracle VM** (Ubuntu 22.04) | Existing VM, always-on |
 | Reverse Proxy | **Nginx** on Oracle VM | Multi-app routing |
 | Process Manager | **PM2** on Oracle VM | Auto-restart, logs |
+| Database | **Supabase** (dashboard/internal apps only) | Postgres + auth + real-time, free tier |
 | Source Control | GitHub | Two repos per app |
 
 > **DO NOT suggest** Docker, Railway, Render, or any cloud backend hosting. All FastAPI backends go on the Oracle VM.
+> **Supabase** is only for apps that need persistent storage or user auth — not for data-fetching/display apps like Athens Events.
 
 ---
 
@@ -577,6 +579,74 @@ sudo nginx -t && sudo systemctl status nginx
 - Add `actions: [{"type": "wait", "milliseconds": 3000}]`
 - Check Firecrawl dashboard for credit usage
 - Fall back to Tavily snippet for that source
+
+---
+
+## 9b. Supabase — When and How to Use It
+
+Supabase is used in **dashboard/internal apps** that need a persistent database with auth and real-time data. It is **not needed** for apps that only fetch and display external data (like Athens Events).
+
+### Use Supabase when the app needs:
+- Persistent storage (users, records, logs that survive restarts)
+- Row-level security / multi-user auth
+- Real-time subscriptions
+- A database that the frontend can query directly without a backend
+
+### Do NOT use Supabase when:
+- The app only fetches and displays external data (Athens Events = scrape → display)
+- A simple in-memory or file cache is sufficient
+- There are no user accounts or persistent writes
+
+### Supabase Setup Pattern (for apps that need it)
+
+**Frontend `.env`:**
+```bash
+VITE_SUPABASE_URL=https://xxxx.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJ...
+```
+
+**Frontend client (`src/services/supabase.ts`):**
+```typescript
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? ''
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY ?? ''
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+```
+
+**Querying data:**
+```typescript
+// Fetch all records
+const { data, error } = await supabase
+  .from('pool_entries')
+  .select('*')
+  .order('created_at', { ascending: false })
+
+// Insert
+const { error } = await supabase
+  .from('pool_entries')
+  .insert({ oik_code: 'OIK001', cost: 150 })
+
+// Update
+const { error } = await supabase
+  .from('pool_entries')
+  .update({ cost: 200 })
+  .eq('id', 123)
+```
+
+**package.json dependency:**
+```json
+"@supabase/supabase-js": "^2.74.0"
+```
+
+### Athens Events — Supabase Decision
+**Not needed in Phase 1.** Reasons:
+- Events change every few hours — persistent storage adds complexity without much benefit
+- In-memory cache (60-min TTL) is sufficient for a single-instance FastAPI app
+- No user accounts, no writes from users, no persistent state required
+
+**If needed in Phase 2+:** Could store scraped events in Supabase to reduce API costs (don't re-scrape if event already in DB for today). A simple `events` table with `date`, `title`, `venue` as unique key would work. But a JSON file cache on the VM is simpler and should be tried first.
 
 ---
 
