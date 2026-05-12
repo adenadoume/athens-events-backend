@@ -1,10 +1,13 @@
 import os
 import json
 import uuid
-import anthropic
+from openai import OpenAI
 from models.event import Event
 
-_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+_client = OpenAI(
+    api_key=os.getenv("DEEPSEEK_API_KEY"),
+    base_url="https://api.deepseek.com",
+)
 
 PARSE_PROMPT = """You are an event data extractor. Extract ALL events from the provided page content.
 Return a JSON array of event objects. Each object must have these fields:
@@ -17,7 +20,7 @@ Return a JSON array of event objects. Each object must have these fields:
 - description: string (2-3 sentence summary of the event)
 - image_url: string (full URL to event image, or "" if not found)
 - ticket_url: string (direct booking link, or the source URL if not found)
-- ticket_source: string — one of: "viva", "ticketswap", "ticketmaster", "ra", "door", "other"
+- ticket_source: string — one of: "viva", "ticketswap", "ticketmaster", "ra", "clubber", "door", "other"
 - price: string or null (e.g. "€15", "Free", or null if unknown)
 - artists: array of strings (performing artists/DJs, empty array if none)
 
@@ -35,16 +38,16 @@ Page content:
 
 def _parse_content_sync(url: str, content: str) -> list[dict]:
     try:
-        message = _client.messages.create(
-            model="claude-sonnet-4-5",
+        response = _client.chat.completions.create(
+            model="deepseek-chat",
             max_tokens=4096,
             messages=[{
                 "role": "user",
                 "content": PARSE_PROMPT.format(url=url, content=content[:12000]),
-            }]
+            }],
+            temperature=0.1,
         )
-        raw = message.content[0].text.strip()
-        # Strip markdown fences if model added them
+        raw = response.choices[0].message.content.strip()
         if raw.startswith("```"):
             raw = raw.split("```")[1]
             if raw.startswith("json"):
@@ -56,25 +59,16 @@ def _parse_content_sync(url: str, content: str) -> list[dict]:
 
 
 def parse_events_from_scraped(scraped_pages: list[dict], tavily_results: list[dict]) -> list[Event]:
-    """
-    Parse events from:
-    1. Firecrawl-scraped markdown pages (rich content)
-    2. Tavily search snippets (fallback for non-scraped pages)
-    Returns deduplicated list of Event objects.
-    """
     all_raw: list[dict] = []
 
-    # Parse firecrawl pages
     for page in scraped_pages:
         raw_events = _parse_content_sync(page["url"], page["markdown"])
         all_raw.extend(raw_events)
 
-    # Parse Tavily snippets for URLs not already scraped
     scraped_urls = {p["url"] for p in scraped_pages}
     tavily_unseen = [r for r in tavily_results if r.get("url") and r["url"] not in scraped_urls]
 
     if tavily_unseen:
-        # Combine all snippets into one batch for efficiency
         combined = "\n\n---\n\n".join(
             f"Source: {r['url']}\nTitle: {r['title']}\n{r['content']}"
             for r in tavily_unseen[:10]
@@ -82,7 +76,6 @@ def parse_events_from_scraped(scraped_pages: list[dict], tavily_results: list[di
         raw_events = _parse_content_sync("combined-search-results", combined)
         all_raw.extend(raw_events)
 
-    # Deduplicate by title+date
     seen: set[str] = set()
     events: list[Event] = []
     for raw in all_raw:
@@ -106,9 +99,8 @@ def parse_events_from_scraped(scraped_pages: list[dict], tavily_results: list[di
                 artists=raw.get("artists", []),
             ))
         except Exception as e:
-            print(f"Event model error: {e} — raw: {raw}")
+            print(f"Event model error: {e}")
             continue
 
-    # Sort by date ascending
     events.sort(key=lambda e: e.date)
     return events
