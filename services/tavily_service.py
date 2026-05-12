@@ -32,6 +32,7 @@ async def search_event_urls(category: str = "all", date_range: str = "this_week"
         f"{cat_str} Athens Greece {date_str}",
         f"Athens events {date_str} site:viva.gr",
         f"Athens events {date_str} site:residentadvisor.net",
+        f"Athens events {date_str} site:clubber.gr",
         f"Athens Greece nightlife {date_str} tickets",
     ]
 

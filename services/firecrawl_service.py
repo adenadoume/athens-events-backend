@@ -13,6 +13,7 @@ DEEP_SCRAPE_DOMAINS = [
     "ticketswap.com",
     "ticketmaster.gr",
     "more.com.gr",
+    "clubber.gr",
 ]
 
 
